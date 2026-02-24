@@ -1,14 +1,12 @@
-'use strict'
-
 /**
  * TaskBoard – Contract Entry Point
  *
  * Registers all TaskBoard protocol operations with the Trac contract runtime.
  */
 
-const protocol = require('./protocol')
+import * as protocol from './protocol.js'
 
-module.exports = async function (contract) {
+export default async function (contract) {
 
   contract.register('task_post',   async (ctx, params, state) => protocol.task_post(ctx, params, state))
   contract.register('task_list',   async (ctx, params, state) => protocol.task_list(ctx, params, state))

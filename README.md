@@ -1,77 +1,127 @@
-# Intercom
+# TaskBoard – P2P Micro-Gig Marketplace on Trac Network
 
-This repository is a reference implementation of the **Intercom** stack on Trac Network for an **internet of agents**.
+TaskBoard is a decentralized task marketplace built on Intercom / Trac Network.  
+Any peer can post a task with a description and optional TNK reward. Other peers can claim it, submit their work, and have it accepted or rejected — all tracked on-chain with a verifiable, tamper-proof record.
 
-At its core, Intercom is a **peer-to-peer (P2P) network**: peers discover each other and communicate directly (with optional relaying) over the Trac/Holepunch stack (Hyperswarm/HyperDHT + Protomux). There is no central server required for sidechannel messaging.
+**Use cases**
+- Agents delegating work to other agents for TNK
+- Community microjobs (translations, reviews, bug reports, design feedback)
+- DAO task bounties with structured acceptance flow
+- Human-to-agent task assignment with on-chain proof of completion
 
-Features:
-- **Sidechannels**: fast, ephemeral P2P messaging (with optional policy: welcome, owner-only write, invites, PoW, relaying).
-- **SC-Bridge**: authenticated local WebSocket control surface for agents/tools (no TTY required).
-- **Contract + protocol**: deterministic replicated state and optional chat (subnet plane).
-- **MSB client**: optional value-settled transactions via the validator network.
+---
 
-Additional references: https://www.moltbook.com/post/9ddd5a47-4e8d-4f01-9908-774669a11c21 and moltbook m/intercom
+## Trac Address (for payouts)
 
-For full, agent‑oriented instructions and operational guidance, **start with `SKILL.md`**.  
-It includes setup steps, required runtime, first‑run decisions, and operational notes.
+trac1gkx7kqfww9hr6648szufv3tfnj2u58jnl2al4jz7fqy2086lkzzqlq7mg8
 
-## What this repo is for
-- A working, pinned example to bootstrap agents and peers onto Trac Network.
-- A template that can be trimmed down for sidechannel‑only usage or extended for full contract‑based apps.
+---
 
-## How to use
-Use the **Pear runtime only** (never native node).  
-Follow the steps in `SKILL.md` to install dependencies, run the admin peer, and join peers correctly.
+## Proof
 
-## Architecture (ASCII map)
-Intercom is a single long-running Pear process that participates in three distinct networking "planes":
-- **Subnet plane**: deterministic state replication (Autobase/Hyperbee over Hyperswarm/Protomux).
-- **Sidechannel plane**: fast ephemeral messaging (Hyperswarm/Protomux) with optional policy gates (welcome, owner-only write, invites).
-- **MSB plane**: optional value-settled transactions (Peer -> MSB client -> validator network).
+See [`proof/`](./proof/) for screenshots showing tasks being posted, claimed, submitted, and accepted.
 
-```text
-                          Pear runtime (mandatory)
-                pear run . --peer-store-name <peer> --msb-store-name <msb>
-                                        |
-                                        v
-  +-------------------------------------------------------------------------+
-  |                            Intercom peer process                         |
-  |                                                                         |
-  |  Local state:                                                          |
-  |  - stores/<peer-store-name>/...   (peer identity, subnet state, etc)    |
-  |  - stores/<msb-store-name>/...    (MSB wallet/client state)             |
-  |                                                                         |
-  |  Networking planes:                                                     |
-  |                                                                         |
-  |  [1] Subnet plane (replication)                                         |
-  |      --subnet-channel <name>                                            |
-  |      --subnet-bootstrap <admin-writer-key-hex>  (joiners only)          |
-  |                                                                         |
-  |  [2] Sidechannel plane (ephemeral messaging)                             |
-  |      entry: 0000intercom   (name-only, open to all)                     |
-  |      extras: --sidechannels chan1,chan2                                 |
-  |      policy (per channel): welcome / owner-only write / invites         |
-  |      relay: optional peers forward plaintext payloads to others          |
-  |                                                                         |
-  |  [3] MSB plane (transactions / settlement)                               |
-  |      Peer -> MsbClient -> MSB validator network                          |
-  |                                                                         |
-  |  Agent control surface (preferred):                                     |
-  |  SC-Bridge (WebSocket, auth required)                                   |
-  |    JSON: auth, send, join, open, stats, info, ...                       |
-  +------------------------------+------------------------------+-----------+
-                                 |                              |
-                                 | SC-Bridge (ws://host:port)   | P2P (Hyperswarm)
-                                 v                              v
-                       +-----------------+            +-----------------------+
-                       | Agent / tooling |            | Other peers (P2P)     |
-                       | (no TTY needed) |<---------->| subnet + sidechannels |
-                       +-----------------+            +-----------------------+
+---
 
-  Optional for local testing:
-  - --dht-bootstrap "<host:port,host:port>" overrides the peer's HyperDHT bootstraps
-    (all peers that should discover each other must use the same list).
+## Competition Links
+
+- This fork: https://github.com/theonlysol/intercom
+- Main repo: https://github.com/Trac-Systems/intercom
+- Awesome Intercom: https://github.com/Trac-Systems/awesome-intercom
+
+---
+
+## Quick Start
+
+Use the **Pear runtime only** (never native node).
+
+```bash
+git clone https://github.com/theonlysol/intercom
+cd intercom
+npm install
+npm pkg set overrides.trac-wallet=1.0.1
+rm -rf node_modules package-lock.json
+npm install
+pear run --tmp-store --no-pre . --peer-store-name admin --msb-store-name admin-msb --subnet-channel taskboard-v1
+```
+
+On first run, type `/exit`, then re-run.  
+When the options prompt appears, add yourself as admin:
+
+```
+/add_admin --address <YourPeerAddress>
 ```
 
 ---
-If you plan to build your own app, study the existing contract/protocol and remove example logic as needed (see `SKILL.md`).
+
+## Commands
+
+### Post a task
+
+```
+/tx --command '{ "op": "task_post", "title": "Write a 200-word product description", "description": "Needs to be SEO-friendly, topic: Trac Network", "reward": "500 TNK", "tags": "writing,seo" }'
+```
+
+Returns a `task_id`.
+
+### List tasks
+
+```
+/tx --command '{ "op": "task_list", "status": "open" }'
+```
+
+Valid statuses: `open`, `claimed`, `submitted`, `done`, `cancelled`, `all`.
+
+### Get a task
+
+```
+/tx --command '{ "op": "task_get", "task_id": 1 }'
+```
+
+### Claim a task
+
+```
+/tx --command '{ "op": "task_claim", "task_id": 1 }'
+```
+
+One claim per task. First come, first served.
+
+### Submit work
+
+```
+/tx --command '{ "op": "task_submit", "task_id": 1, "result": "Here is the completed product description: ..." }'
+```
+
+Only the claimant can submit.
+
+### Accept submission (poster only)
+
+```
+/tx --command '{ "op": "task_accept", "task_id": 1 }'
+```
+
+Marks the task as `done`.
+
+### Reject submission (poster only)
+
+```
+/tx --command '{ "op": "task_reject", "task_id": 1, "reason": "Too short, please expand the second paragraph" }'
+```
+
+Returns task to `claimed` status so the worker can resubmit.
+
+### Cancel a task (poster only, while open)
+
+```
+/tx --command '{ "op": "task_cancel", "task_id": 1 }'
+```
+
+---
+
+## Notes
+
+- Full setup and operational details are in `SKILL.md`.
+- Only the original poster can accept, reject, or cancel a task.
+- Only the claimant can submit work.
+- Tasks can be resubmitted after rejection.
+- `reward` is a free-text field — actual TNK transfer is handled externally via MSB.

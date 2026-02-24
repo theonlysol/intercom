@@ -1,5 +1,3 @@
-'use strict'
-
 /**
  * TaskBoard – P2P Micro-Gig Marketplace Protocol
  *
@@ -320,7 +318,7 @@ async function task_cancel (ctx, params, state) {
 // ------------------------------------------------------------------ //
 //  Exports
 // ------------------------------------------------------------------ //
-module.exports = {
+export {
   task_post,
   task_list,
   task_get,

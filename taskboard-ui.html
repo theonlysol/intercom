@@ -1,0 +1,1525 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TaskBoard — P2P Micro-Gig Marketplace</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;500;600;700&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #020408;
+    --bg2: #040d14;
+    --bg3: #071525;
+    --panel: #060f1a;
+    --border: #0d3a5c;
+    --border2: #0a4f7a;
+    --cyan: #00d4ff;
+    --cyan2: #00aacc;
+    --green: #00ff88;
+    --green2: #00cc6a;
+    --yellow: #ffd700;
+    --orange: #ff6b00;
+    --red: #ff2244;
+    --text: #c8e8f8;
+    --text2: #6a9ab8;
+    --text3: #3a6a88;
+    --glow-cyan: 0 0 20px rgba(0,212,255,0.4), 0 0 40px rgba(0,212,255,0.15);
+    --glow-green: 0 0 20px rgba(0,255,136,0.4), 0 0 40px rgba(0,255,136,0.15);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 15px;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Scanline overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.08) 2px,
+      rgba(0,0,0,0.08) 4px
+    );
+    pointer-events: none;
+    z-index: 1000;
+  }
+
+  /* Grid background */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* HEADER */
+  header {
+    position: relative;
+    z-index: 10;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, rgba(0,212,255,0.05) 0%, transparent 100%);
+    padding: 0 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 64px;
+  }
+
+  .logo {
+    font-family: 'Orbitron', monospace;
+    font-size: 22px;
+    font-weight: 900;
+    letter-spacing: 4px;
+    color: var(--cyan);
+    text-shadow: var(--glow-cyan);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .logo-icon {
+    width: 32px;
+    height: 32px;
+    border: 2px solid var(--cyan);
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3px;
+    padding: 5px;
+    box-shadow: var(--glow-cyan);
+    animation: pulse 3s ease-in-out infinite;
+  }
+
+  .logo-icon span {
+    background: var(--cyan);
+    display: block;
+  }
+
+  .logo-icon span:last-child {
+    grid-column: span 2;
+    height: 3px;
+    margin-top: 1px;
+  }
+
+  @keyframes pulse {
+    0%, 100% { box-shadow: var(--glow-cyan); }
+    50% { box-shadow: 0 0 30px rgba(0,212,255,0.7), 0 0 60px rgba(0,212,255,0.3); }
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+  }
+
+  .status-dot {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    color: var(--green);
+  }
+
+  .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 10px var(--green);
+    animation: blink 2s ease-in-out infinite;
+  }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  .network-badge {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: var(--text2);
+    border: 1px solid var(--border);
+    padding: 4px 10px;
+    letter-spacing: 1px;
+  }
+
+  /* MAIN LAYOUT */
+  .app {
+    position: relative;
+    z-index: 10;
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    min-height: calc(100vh - 64px);
+  }
+
+  /* SIDEBAR */
+  .sidebar {
+    border-right: 1px solid var(--border);
+    background: var(--panel);
+    padding: 24px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .sidebar-section {
+    padding: 0 16px;
+    margin-bottom: 8px;
+  }
+
+  .sidebar-label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: var(--text3);
+    letter-spacing: 2px;
+    padding: 0 8px;
+    margin-bottom: 8px;
+  }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px;
+    cursor: pointer;
+    border-left: 2px solid transparent;
+    transition: all 0.15s;
+    color: var(--text2);
+    font-weight: 600;
+    font-size: 14px;
+    letter-spacing: 0.5px;
+    user-select: none;
+  }
+
+  .nav-item:hover {
+    color: var(--cyan);
+    background: rgba(0,212,255,0.05);
+    border-left-color: var(--cyan2);
+  }
+
+  .nav-item.active {
+    color: var(--cyan);
+    background: rgba(0,212,255,0.08);
+    border-left-color: var(--cyan);
+  }
+
+  .nav-item .nav-icon {
+    width: 16px;
+    text-align: center;
+    font-size: 13px;
+  }
+
+  .nav-badge {
+    margin-left: auto;
+    background: rgba(0,212,255,0.15);
+    color: var(--cyan);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    padding: 2px 6px;
+    border: 1px solid rgba(0,212,255,0.3);
+  }
+
+  .sidebar-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 12px 16px;
+  }
+
+  .stats-panel {
+    margin: 0 16px;
+    border: 1px solid var(--border);
+    padding: 14px;
+    background: var(--bg3);
+  }
+
+  .stats-panel-title {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: var(--text3);
+    letter-spacing: 2px;
+    margin-bottom: 12px;
+  }
+
+  .stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    font-size: 13px;
+  }
+
+  .stat-label { color: var(--text2); }
+
+  .stat-value {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    color: var(--cyan);
+  }
+
+  .stat-value.green { color: var(--green); }
+  .stat-value.yellow { color: var(--yellow); }
+
+  /* MAIN CONTENT */
+  .main {
+    padding: 28px 32px;
+    overflow-y: auto;
+  }
+
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* PAGE HEADER */
+  .page-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 28px;
+  }
+
+  .page-title {
+    font-family: 'Orbitron', monospace;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--cyan);
+    letter-spacing: 2px;
+    text-shadow: var(--glow-cyan);
+  }
+
+  .page-subtitle {
+    color: var(--text3);
+    font-size: 13px;
+    margin-top: 4px;
+    font-family: 'Share Tech Mono', monospace;
+  }
+
+  /* BUTTONS */
+  .btn {
+    padding: 10px 20px;
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    letter-spacing: 1.5px;
+    cursor: pointer;
+    border: none;
+    transition: all 0.15s;
+    text-transform: uppercase;
+  }
+
+  .btn-primary {
+    background: var(--cyan);
+    color: var(--bg);
+    clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+  }
+
+  .btn-primary:hover {
+    background: var(--cyan2);
+    box-shadow: var(--glow-cyan);
+  }
+
+  .btn-outline {
+    background: transparent;
+    color: var(--cyan);
+    border: 1px solid var(--border2);
+  }
+
+  .btn-outline:hover {
+    border-color: var(--cyan);
+    background: rgba(0,212,255,0.08);
+  }
+
+  .btn-danger {
+    background: transparent;
+    color: var(--red);
+    border: 1px solid rgba(255,34,68,0.3);
+  }
+
+  .btn-danger:hover {
+    background: rgba(255,34,68,0.1);
+    border-color: var(--red);
+  }
+
+  .btn-success {
+    background: var(--green);
+    color: var(--bg);
+    clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+  }
+
+  .btn-success:hover { box-shadow: var(--glow-green); }
+
+  .btn-sm { padding: 6px 14px; font-size: 11px; }
+
+  /* FILTER BAR */
+  .filter-bar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+
+  .filter-chip {
+    padding: 6px 14px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    color: var(--text2);
+    background: transparent;
+    letter-spacing: 1px;
+    transition: all 0.15s;
+    user-select: none;
+  }
+
+  .filter-chip:hover { border-color: var(--cyan2); color: var(--cyan); }
+  .filter-chip.active { border-color: var(--cyan); color: var(--cyan); background: rgba(0,212,255,0.08); }
+
+  /* TASK GRID */
+  .task-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 16px;
+  }
+
+  /* TASK CARD */
+  .task-card {
+    border: 1px solid var(--border);
+    background: var(--panel);
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.2s;
+    cursor: pointer;
+    clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 0 100%);
+  }
+
+  .task-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  .task-card:hover {
+    border-color: var(--border2);
+    background: var(--bg3);
+    transform: translateY(-2px);
+  }
+
+  .task-card:hover::before { opacity: 1; }
+
+  .task-card.status-open { border-left: 2px solid var(--cyan); }
+  .task-card.status-claimed { border-left: 2px solid var(--yellow); }
+  .task-card.status-submitted { border-left: 2px solid var(--orange); }
+  .task-card.status-done { border-left: 2px solid var(--green); }
+  .task-card.status-cancelled { border-left: 2px solid var(--text3); opacity: 0.5; }
+
+  .task-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 10px;
+  }
+
+  .task-id {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: var(--text3);
+    letter-spacing: 1px;
+  }
+
+  .status-badge {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    padding: 3px 8px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .status-badge.open { color: var(--cyan); border: 1px solid rgba(0,212,255,0.3); background: rgba(0,212,255,0.08); }
+  .status-badge.claimed { color: var(--yellow); border: 1px solid rgba(255,215,0,0.3); background: rgba(255,215,0,0.08); }
+  .status-badge.submitted { color: var(--orange); border: 1px solid rgba(255,107,0,0.3); background: rgba(255,107,0,0.08); }
+  .status-badge.done { color: var(--green); border: 1px solid rgba(0,255,136,0.3); background: rgba(0,255,136,0.08); }
+  .status-badge.cancelled { color: var(--text3); border: 1px solid var(--border); }
+
+  .task-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 8px;
+    line-height: 1.3;
+  }
+
+  .task-desc {
+    font-size: 13px;
+    color: var(--text2);
+    line-height: 1.5;
+    margin-bottom: 14px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .task-tags {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+  }
+
+  .tag {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: var(--text3);
+    border: 1px solid var(--border);
+    padding: 2px 8px;
+    letter-spacing: 1px;
+  }
+
+  .task-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+  }
+
+  .task-reward {
+    font-family: 'Orbitron', monospace;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--yellow);
+    text-shadow: 0 0 10px rgba(255,215,0,0.3);
+  }
+
+  .task-meta {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: var(--text3);
+  }
+
+  /* EMPTY STATE */
+  .empty-state {
+    text-align: center;
+    padding: 80px 20px;
+    color: var(--text3);
+    grid-column: 1 / -1;
+  }
+
+  .empty-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+    opacity: 0.3;
+  }
+
+  .empty-text {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 13px;
+    letter-spacing: 2px;
+  }
+
+  /* MODAL */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+  }
+
+  .modal-overlay.open { display: flex; }
+
+  .modal {
+    background: var(--bg2);
+    border: 1px solid var(--border2);
+    width: 560px;
+    max-width: 95vw;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 0 60px rgba(0,212,255,0.15), 0 0 120px rgba(0,0,0,0.8);
+    clip-path: polygon(0 0, calc(100% - 20px) 0, 100% 20px, 100% 100%, 20px 100%, 0 calc(100% - 20px));
+    animation: modalIn 0.2s ease;
+  }
+
+  @keyframes modalIn {
+    from { opacity: 0; transform: scale(0.95) translateY(-10px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+  }
+
+  .modal-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: linear-gradient(180deg, rgba(0,212,255,0.05) 0%, transparent 100%);
+  }
+
+  .modal-title {
+    font-family: 'Orbitron', monospace;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--cyan);
+    letter-spacing: 2px;
+  }
+
+  .modal-close {
+    background: none;
+    border: none;
+    color: var(--text3);
+    font-size: 20px;
+    cursor: pointer;
+    line-height: 1;
+    padding: 4px;
+  }
+
+  .modal-close:hover { color: var(--cyan); }
+
+  .modal-body { padding: 24px; }
+
+  .modal-footer {
+    padding: 16px 24px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+  }
+
+  /* FORM */
+  .form-group { margin-bottom: 18px; }
+
+  .form-label {
+    display: block;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: var(--text3);
+    letter-spacing: 2px;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+  }
+
+  .form-input, .form-textarea, .form-select {
+    width: 100%;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 10px 14px;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 15px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+
+  .form-input:focus, .form-textarea:focus, .form-select:focus {
+    border-color: var(--cyan2);
+    box-shadow: 0 0 0 1px rgba(0,212,255,0.2);
+  }
+
+  .form-textarea {
+    resize: vertical;
+    min-height: 100px;
+    line-height: 1.5;
+  }
+
+  .form-select option { background: var(--bg3); }
+
+  .char-count {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: var(--text3);
+    text-align: right;
+    margin-top: 4px;
+  }
+
+  /* TASK DETAIL */
+  .detail-section {
+    margin-bottom: 20px;
+  }
+
+  .detail-label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: var(--text3);
+    letter-spacing: 2px;
+    margin-bottom: 6px;
+  }
+
+  .detail-value {
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  .detail-value.mono {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    color: var(--cyan);
+    word-break: break-all;
+  }
+
+  .detail-reward {
+    font-family: 'Orbitron', monospace;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--yellow);
+    text-shadow: 0 0 20px rgba(255,215,0,0.4);
+  }
+
+  .action-row {
+    display: flex;
+    gap: 10px;
+    margin-top: 8px;
+  }
+
+  /* NOTIFICATION */
+  .notification {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    padding: 14px 20px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    z-index: 200;
+    max-width: 340px;
+    animation: slideIn 0.3s ease;
+    box-shadow: 0 0 30px rgba(0,0,0,0.5);
+    clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 0 100%);
+  }
+
+  .notification.success { border-color: var(--green); color: var(--green); }
+  .notification.error { border-color: var(--red); color: var(--red); }
+  .notification.info { border-color: var(--cyan); color: var(--cyan); }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(20px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  /* TERMINAL LOG */
+  .terminal {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    padding: 16px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    max-height: 200px;
+    overflow-y: auto;
+    margin-top: 16px;
+  }
+
+  .terminal-line {
+    color: var(--text3);
+    line-height: 1.8;
+  }
+
+  .terminal-line.cmd { color: var(--cyan); }
+  .terminal-line.success { color: var(--green); }
+  .terminal-line.error { color: var(--red); }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border2); }
+  ::-webkit-scrollbar-thumb:hover { background: var(--cyan2); }
+
+  /* CORNER DECORATION */
+  .corner-decor {
+    position: absolute;
+    top: 0; right: 0;
+    width: 16px; height: 16px;
+    border-top: 1px solid var(--cyan);
+    border-right: 1px solid var(--cyan);
+    opacity: 0.5;
+  }
+
+  /* ANIMATED TICKER */
+  .ticker {
+    background: rgba(0,212,255,0.05);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    padding: 6px 0;
+    overflow: hidden;
+    white-space: nowrap;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: var(--text3);
+    letter-spacing: 1px;
+    margin-bottom: 20px;
+  }
+
+  .ticker-inner {
+    display: inline-block;
+    animation: ticker 30s linear infinite;
+  }
+
+  @keyframes ticker {
+    0% { transform: translateX(100vw); }
+    100% { transform: translateX(-100%); }
+  }
+
+  /* NODE INFO BAR */
+  .node-bar {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    padding: 12px 16px;
+    display: flex;
+    gap: 24px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+  }
+
+  .node-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .node-stat-label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    color: var(--text3);
+    letter-spacing: 2px;
+  }
+
+  .node-stat-value {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    color: var(--cyan);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">
+      <span></span><span></span>
+      <span></span>
+    </div>
+    TASKBOARD
+  </div>
+  <div class="header-right">
+    <div class="status-dot">
+      <div class="dot"></div>
+      CONNECTED
+    </div>
+    <div class="network-badge">TRAC MAINNET</div>
+    <div class="network-badge" id="peerBadge">PEER: ce6b0f77...</div>
+  </div>
+</header>
+
+<div class="app">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">NAVIGATE</div>
+      <div class="nav-item active" onclick="showPage('browse')">
+        <span class="nav-icon">◈</span> Browse Tasks
+        <span class="nav-badge" id="openCount">0</span>
+      </div>
+      <div class="nav-item" onclick="showPage('post')">
+        <span class="nav-icon">✦</span> Post a Task
+      </div>
+      <div class="nav-item" onclick="showPage('my-tasks')">
+        <span class="nav-icon">◉</span> My Tasks
+        <span class="nav-badge" id="myCount">0</span>
+      </div>
+      <div class="nav-item" onclick="showPage('claimed')">
+        <span class="nav-icon">◆</span> Claimed Work
+      </div>
+    </div>
+
+    <div class="sidebar-divider"></div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">NETWORK</div>
+      <div class="stats-panel">
+        <div class="stats-panel-title">// LIVE STATS</div>
+        <div class="stat-row">
+          <span class="stat-label">Total Tasks</span>
+          <span class="stat-value" id="totalTasks">0</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Open</span>
+          <span class="stat-value" id="statOpen">0</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">In Progress</span>
+          <span class="stat-value yellow" id="statClaimed">0</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Completed</span>
+          <span class="stat-value green" id="statDone">0</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Validators</span>
+          <span class="stat-value green">50</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="sidebar-divider"></div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">ACTIONS</div>
+      <div class="nav-item" onclick="refreshTasks()">
+        <span class="nav-icon">⟳</span> Refresh
+      </div>
+      <div class="nav-item" onclick="showTerminal()">
+        <span class="nav-icon">▶</span> TX Log
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="main">
+
+    <!-- BROWSE PAGE -->
+    <div class="page active" id="page-browse">
+      <div class="page-header">
+        <div>
+          <div class="page-title">BROWSE TASKS</div>
+          <div class="page-subtitle">// peer-to-peer micro-gig marketplace on Trac Network</div>
+        </div>
+        <button class="btn btn-primary" onclick="showPage('post')">✦ POST TASK</button>
+      </div>
+
+      <div class="ticker">
+        <span class="ticker-inner">
+          ◈ TASKBOARD v1.0 — DECENTRALIZED MICRO-GIG MARKETPLACE &nbsp;◈&nbsp; BUILT ON TRAC NETWORK &nbsp;◈&nbsp; SUBNET: taskboard-v1 &nbsp;◈&nbsp; ALL TRANSACTIONS SETTLED ON-CHAIN &nbsp;◈&nbsp; NO INTERMEDIARIES. NO CENSORSHIP. NO LIMITS. &nbsp;◈&nbsp;
+        </span>
+      </div>
+
+      <div class="filter-bar">
+        <div class="filter-chip active" onclick="filterTasks('all', this)">ALL</div>
+        <div class="filter-chip" onclick="filterTasks('open', this)">OPEN</div>
+        <div class="filter-chip" onclick="filterTasks('claimed', this)">CLAIMED</div>
+        <div class="filter-chip" onclick="filterTasks('submitted', this)">SUBMITTED</div>
+        <div class="filter-chip" onclick="filterTasks('done', this)">DONE</div>
+      </div>
+
+      <div class="task-grid" id="taskGrid">
+        <div class="empty-state">
+          <div class="empty-icon">◈</div>
+          <div class="empty-text">NO TASKS YET — BE THE FIRST TO POST</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- POST TASK PAGE -->
+    <div class="page" id="page-post">
+      <div class="page-header">
+        <div>
+          <div class="page-title">POST A TASK</div>
+          <div class="page-subtitle">// broadcast a gig request to the network</div>
+        </div>
+      </div>
+
+      <div style="max-width: 600px;">
+        <div class="form-group">
+          <label class="form-label">Task Title *</label>
+          <input type="text" class="form-input" id="postTitle" maxlength="100" placeholder="e.g. Write a product description" oninput="updateCharCount('postTitle', 'titleCount', 100)">
+          <div class="char-count"><span id="titleCount">0</span>/100</div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Description *</label>
+          <textarea class="form-textarea" id="postDesc" maxlength="1000" placeholder="Describe what needs to be done, requirements, deliverables..." oninput="updateCharCount('postDesc', 'descCount', 1000)" style="min-height: 120px;"></textarea>
+          <div class="char-count"><span id="descCount">0</span>/1000</div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Reward (optional)</label>
+          <input type="text" class="form-input" id="postReward" placeholder="e.g. 500 TNK">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Tags (comma separated)</label>
+          <input type="text" class="form-input" id="postTags" placeholder="e.g. writing, seo, research">
+        </div>
+
+        <div class="action-row" style="margin-top: 24px;">
+          <button class="btn btn-primary" onclick="submitPostTask()">✦ BROADCAST TASK</button>
+          <button class="btn btn-outline" onclick="showPage('browse')">CANCEL</button>
+        </div>
+
+        <div class="terminal" id="postTerminal" style="display:none;">
+          <div class="terminal-line">// TX LOG</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MY TASKS PAGE -->
+    <div class="page" id="page-my-tasks">
+      <div class="page-header">
+        <div>
+          <div class="page-title">MY TASKS</div>
+          <div class="page-subtitle">// tasks you have posted</div>
+        </div>
+      </div>
+      <div class="task-grid" id="myTaskGrid">
+        <div class="empty-state">
+          <div class="empty-icon">◈</div>
+          <div class="empty-text">YOU HAVEN'T POSTED ANY TASKS YET</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CLAIMED WORK PAGE -->
+    <div class="page" id="page-claimed">
+      <div class="page-header">
+        <div>
+          <div class="page-title">CLAIMED WORK</div>
+          <div class="page-subtitle">// tasks you are working on</div>
+        </div>
+      </div>
+      <div class="task-grid" id="claimedGrid">
+        <div class="empty-state">
+          <div class="empty-icon">◈</div>
+          <div class="empty-text">NO ACTIVE WORK — CLAIM A TASK TO GET STARTED</div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- TASK DETAIL MODAL -->
+<div class="modal-overlay" id="detailModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modalTitle">TASK DETAIL</div>
+      <button class="modal-close" onclick="closeModal('detailModal')">✕</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+    <div class="modal-footer" id="modalFooter"></div>
+  </div>
+</div>
+
+<!-- SUBMIT WORK MODAL -->
+<div class="modal-overlay" id="submitModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">SUBMIT WORK</div>
+      <button class="modal-close" onclick="closeModal('submitModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Work Result / Deliverable *</label>
+        <textarea class="form-textarea" id="submitResult" maxlength="4000" placeholder="Paste your completed work, link, or deliverable here..." style="min-height: 150px;" oninput="updateCharCount('submitResult', 'resultCount', 4000)"></textarea>
+        <div class="char-count"><span id="resultCount">0</span>/4000</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-success btn-sm" onclick="confirmSubmit()">SUBMIT WORK</button>
+      <button class="btn btn-outline btn-sm" onclick="closeModal('submitModal')">CANCEL</button>
+    </div>
+  </div>
+</div>
+
+<!-- REJECT MODAL -->
+<div class="modal-overlay" id="rejectModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">REJECT SUBMISSION</div>
+      <button class="modal-close" onclick="closeModal('rejectModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Reason for Rejection (optional)</label>
+        <textarea class="form-textarea" id="rejectReason" maxlength="500" placeholder="Explain what needs to be improved..." style="min-height: 100px;" oninput="updateCharCount('rejectReason', 'reasonCount', 500)"></textarea>
+        <div class="char-count"><span id="reasonCount">0</span>/500</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger btn-sm" onclick="confirmReject()">REJECT</button>
+      <button class="btn btn-outline btn-sm" onclick="closeModal('rejectModal')">CANCEL</button>
+    </div>
+  </div>
+</div>
+
+<!-- TX LOG MODAL -->
+<div class="modal-overlay" id="terminalModal">
+  <div class="modal" style="width: 700px;">
+    <div class="modal-header">
+      <div class="modal-title">// TX LOG</div>
+      <button class="modal-close" onclick="closeModal('terminalModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="terminal" id="globalTerminal" style="max-height: 400px;">
+        <div class="terminal-line">// TASKBOARD TRANSACTION LOG</div>
+        <div class="terminal-line">// Subnet: taskboard-v1 | Network: Trac Mainnet</div>
+        <div class="terminal-line">——————————————————————————————</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline btn-sm" onclick="clearLog()">CLEAR LOG</button>
+      <button class="btn btn-outline btn-sm" onclick="closeModal('terminalModal')">CLOSE</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── STATE ───────────────────────────────────────────────────────────────────
+let tasks = [];
+let currentFilter = 'all';
+let selectedTask = null;
+let currentUser = 'ce6b0f7704cda41e86aed1398adc3b505c0aa44b0cf343263d653f3067058e2c';
+let taskCounter = 0;
+let txLog = [];
+
+// ─── SEED DATA ───────────────────────────────────────────────────────────────
+function seedData() {
+  tasks = [
+    {
+      id: 1,
+      title: 'Write a product description',
+      description: 'SEO-friendly copy for Trac Network, 200 words. Focus on decentralization, P2P features, and the TNK token ecosystem.',
+      reward: '500 TNK',
+      tags: ['writing', 'seo'],
+      status: 'open',
+      posted_by: currentUser,
+      created_at: Date.now() - 3600000,
+      claimed_by: null,
+      result: null,
+      reject_reason: null
+    },
+    {
+      id: 2,
+      title: 'Fix a bug in Python ETL script',
+      description: 'Debug and fix a data parsing error in a Python ETL script that processes blockchain transaction data.',
+      reward: '300 TNK',
+      tags: ['coding', 'python'],
+      status: 'claimed',
+      posted_by: currentUser,
+      created_at: Date.now() - 7200000,
+      claimed_by: 'ab34cd56ef78901234567890abcdef1234567890abcdef1234567890abcdef12',
+      result: null,
+      reject_reason: null
+    },
+    {
+      id: 3,
+      title: 'Translate website to French',
+      description: 'Translate 5 pages of website content from English to French. Native speaker preferred.',
+      reward: '200 TNK',
+      tags: ['translation', 'french'],
+      status: 'submitted',
+      posted_by: '99fb8b6f844eee3c16807541a858d41a931fd7250d066416e7beed78563cbbac',
+      created_at: Date.now() - 86400000,
+      claimed_by: currentUser,
+      result: 'Translation complete. All 5 pages translated with native-level French. Attached in the shared drive link: https://drive.example.com/translated-pages',
+      reject_reason: null
+    },
+    {
+      id: 4,
+      title: 'Design a logo for P2P marketplace',
+      description: 'Create a simple, modern logo for a P2P marketplace app. Dark theme, cyberpunk aesthetic preferred.',
+      reward: '400 TNK',
+      tags: ['design', 'logo'],
+      status: 'done',
+      posted_by: '99fb8b6f844eee3c16807541a858d41a931fd7250d066416e7beed78563cbbac',
+      created_at: Date.now() - 172800000,
+      claimed_by: currentUser,
+      result: 'Logo delivered in SVG, PNG, and PDF formats.',
+      reject_reason: null
+    }
+  ];
+  taskCounter = tasks.length;
+  updateStats();
+  renderTasks();
+}
+
+// ─── NAVIGATION ──────────────────────────────────────────────────────────────
+function showPage(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+
+  const navMap = { browse: 0, post: 1, 'my-tasks': 2, claimed: 3 };
+  const navItems = document.querySelectorAll('.nav-item');
+  if (navMap[page] !== undefined) navItems[navMap[page]].classList.add('active');
+
+  if (page === 'my-tasks') renderMyTasks();
+  if (page === 'claimed') renderClaimedTasks();
+}
+
+// ─── RENDER ───────────────────────────────────────────────────────────────────
+function renderTasks() {
+  const grid = document.getElementById('taskGrid');
+  const filtered = currentFilter === 'all' ? tasks : tasks.filter(t => t.status === currentFilter);
+
+  if (filtered.length === 0) {
+    grid.innerHTML = `<div class="empty-state"><div class="empty-icon">◈</div><div class="empty-text">NO TASKS FOUND</div></div>`;
+    return;
+  }
+
+  grid.innerHTML = filtered.map(taskCard).join('');
+}
+
+function renderMyTasks() {
+  const grid = document.getElementById('myTaskGrid');
+  const mine = tasks.filter(t => t.posted_by === currentUser);
+  if (mine.length === 0) {
+    grid.innerHTML = `<div class="empty-state"><div class="empty-icon">◈</div><div class="empty-text">YOU HAVEN'T POSTED ANY TASKS YET</div></div>`;
+    return;
+  }
+  grid.innerHTML = mine.map(taskCard).join('');
+}
+
+function renderClaimedTasks() {
+  const grid = document.getElementById('claimedGrid');
+  const claimed = tasks.filter(t => t.claimed_by === currentUser);
+  if (claimed.length === 0) {
+    grid.innerHTML = `<div class="empty-state"><div class="empty-icon">◈</div><div class="empty-text">NO ACTIVE WORK — CLAIM A TASK TO GET STARTED</div></div>`;
+    return;
+  }
+  grid.innerHTML = claimed.map(taskCard).join('');
+}
+
+function taskCard(task) {
+  const timeAgo = formatTime(task.created_at);
+  const tags = task.tags.map(t => `<span class="tag">#${t}</span>`).join('');
+  return `
+    <div class="task-card status-${task.status}" onclick="openTaskDetail(${task.id})">
+      <div class="corner-decor"></div>
+      <div class="task-card-header">
+        <span class="task-id">TASK-${String(task.id).padStart(4,'0')}</span>
+        <span class="status-badge ${task.status}">${task.status.toUpperCase()}</span>
+      </div>
+      <div class="task-title">${task.title}</div>
+      <div class="task-desc">${task.description}</div>
+      ${tags ? `<div class="task-tags">${tags}</div>` : ''}
+      <div class="task-footer">
+        <span class="task-reward">${task.reward || '—'}</span>
+        <span class="task-meta">${timeAgo}</span>
+      </div>
+    </div>
+  `;
+}
+
+// ─── TASK DETAIL ─────────────────────────────────────────────────────────────
+function openTaskDetail(id) {
+  selectedTask = tasks.find(t => t.id === id);
+  if (!selectedTask) return;
+  const t = selectedTask;
+  const isOwner = t.posted_by === currentUser;
+  const isWorker = t.claimed_by === currentUser;
+  const tags = t.tags.map(tag => `<span class="tag">#${tag}</span>`).join(' ');
+
+  document.getElementById('modalTitle').textContent = `TASK-${String(t.id).padStart(4,'0')} // ${t.status.toUpperCase()}`;
+
+  document.getElementById('modalBody').innerHTML = `
+    <div class="detail-section">
+      <div class="detail-label">TITLE</div>
+      <div class="detail-value" style="font-size:18px;font-weight:700;">${t.title}</div>
+    </div>
+    <div class="detail-section">
+      <div class="detail-label">DESCRIPTION</div>
+      <div class="detail-value">${t.description}</div>
+    </div>
+    ${t.tags.length ? `<div class="detail-section"><div class="detail-label">TAGS</div><div class="task-tags" style="margin:0;">${tags}</div></div>` : ''}
+    <div class="detail-section">
+      <div class="detail-label">REWARD</div>
+      <div class="detail-reward">${t.reward || 'No reward specified'}</div>
+    </div>
+    <div class="detail-section">
+      <div class="detail-label">POSTED BY</div>
+      <div class="detail-value mono">${t.posted_by}${isOwner ? ' <span style="color:var(--green);font-size:10px;">[YOU]</span>' : ''}</div>
+    </div>
+    ${t.claimed_by ? `
+    <div class="detail-section">
+      <div class="detail-label">CLAIMED BY</div>
+      <div class="detail-value mono">${t.claimed_by}${isWorker ? ' <span style="color:var(--green);font-size:10px;">[YOU]</span>' : ''}</div>
+    </div>` : ''}
+    ${t.result ? `
+    <div class="detail-section">
+      <div class="detail-label">SUBMITTED WORK</div>
+      <div class="detail-value" style="background:var(--bg3);padding:12px;border:1px solid var(--border);font-size:13px;">${t.result}</div>
+    </div>` : ''}
+    ${t.reject_reason ? `
+    <div class="detail-section">
+      <div class="detail-label">REJECTION REASON</div>
+      <div class="detail-value" style="color:var(--red);font-size:13px;">${t.reject_reason}</div>
+    </div>` : ''}
+  `;
+
+  // Action buttons
+  let buttons = '';
+  if (t.status === 'open' && !isOwner) {
+    buttons = `<button class="btn btn-primary btn-sm" onclick="claimTask(${t.id})">◆ CLAIM TASK</button>`;
+  }
+  if (t.status === 'claimed' && isWorker) {
+    buttons = `<button class="btn btn-primary btn-sm" onclick="openSubmitModal(${t.id})">✦ SUBMIT WORK</button>`;
+  }
+  if (t.status === 'submitted' && isOwner) {
+    buttons = `
+      <button class="btn btn-success btn-sm" onclick="acceptTask(${t.id})">✓ ACCEPT</button>
+      <button class="btn btn-danger btn-sm" onclick="openRejectModal(${t.id})">✕ REJECT</button>
+    `;
+  }
+  if (t.status === 'open' && isOwner) {
+    buttons = `<button class="btn btn-danger btn-sm" onclick="cancelTask(${t.id})">✕ CANCEL</button>`;
+  }
+
+  document.getElementById('modalFooter').innerHTML = buttons +
+    `<button class="btn btn-outline btn-sm" onclick="closeModal('detailModal')">CLOSE</button>`;
+
+  document.getElementById('detailModal').classList.add('open');
+}
+
+// ─── ACTIONS ─────────────────────────────────────────────────────────────────
+function submitPostTask() {
+  const title = document.getElementById('postTitle').value.trim();
+  const desc = document.getElementById('postDesc').value.trim();
+  const reward = document.getElementById('postReward').value.trim();
+  const tags = document.getElementById('postTags').value.trim();
+
+  if (!title) { showNotification('Title is required', 'error'); return; }
+  if (!desc) { showNotification('Description is required', 'error'); return; }
+
+  taskCounter++;
+  const task = {
+    id: taskCounter,
+    title,
+    description: desc,
+    reward,
+    tags: tags ? tags.split(',').map(t => t.trim()).filter(Boolean) : [],
+    status: 'open',
+    posted_by: currentUser,
+    created_at: Date.now(),
+    claimed_by: null,
+    result: null,
+    reject_reason: null
+  };
+
+  tasks.unshift(task);
+  updateStats();
+
+  const cmd = `/tx --command '{ "op": "task_post", "title": "${title}", "description": "${desc}", "reward": "${reward}", "tags": "${tags}" }'`;
+  const hash = generateFakeHash();
+  addToLog(cmd, `MSB TX broadcasted: ${hash}`, 'success');
+
+  document.getElementById('postTitle').value = '';
+  document.getElementById('postDesc').value = '';
+  document.getElementById('postReward').value = '';
+  document.getElementById('postTags').value = '';
+  updateCharCount('postTitle', 'titleCount', 100);
+  updateCharCount('postDesc', 'descCount', 1000);
+
+  showNotification(`Task posted! TX: ${hash.slice(0,16)}...`, 'success');
+  showPage('browse');
+  renderTasks();
+}
+
+function claimTask(id) {
+  const task = tasks.find(t => t.id === id);
+  if (!task || task.status !== 'open') return;
+
+  task.status = 'claimed';
+  task.claimed_by = currentUser;
+
+  const hash = generateFakeHash();
+  addToLog(`/tx --command '{ "op": "task_claim", "task_id": ${id} }'`, `MSB TX broadcasted: ${hash}`, 'success');
+
+  updateStats();
+  closeModal('detailModal');
+  renderTasks();
+  showNotification(`Task claimed! TX: ${hash.slice(0,16)}...`, 'success');
+}
+
+function openSubmitModal(id) {
+  selectedTask = tasks.find(t => t.id === id);
+  document.getElementById('submitResult').value = '';
+  updateCharCount('submitResult', 'resultCount', 4000);
+  closeModal('detailModal');
+  document.getElementById('submitModal').classList.add('open');
+}
+
+function confirmSubmit() {
+  const result = document.getElementById('submitResult').value.trim();
+  if (!result) { showNotification('Result is required', 'error'); return; }
+
+  selectedTask.result = result;
+  selectedTask.status = 'submitted';
+
+  const hash = generateFakeHash();
+  addToLog(`/tx --command '{ "op": "task_submit", "task_id": ${selectedTask.id}, "result": "..." }'`, `MSB TX broadcasted: ${hash}`, 'success');
+
+  updateStats();
+  closeModal('submitModal');
+  renderTasks();
+  showNotification(`Work submitted! TX: ${hash.slice(0,16)}...`, 'success');
+}
+
+function acceptTask(id) {
+  const task = tasks.find(t => t.id === id);
+  if (!task) return;
+  task.status = 'done';
+
+  const hash = generateFakeHash();
+  addToLog(`/tx --command '{ "op": "task_accept", "task_id": ${id} }'`, `MSB TX broadcasted: ${hash}`, 'success');
+
+  updateStats();
+  closeModal('detailModal');
+  renderTasks();
+  showNotification(`Work accepted! Task complete. TX: ${hash.slice(0,16)}...`, 'success');
+}
+
+function openRejectModal(id) {
+  selectedTask = tasks.find(t => t.id === id);
+  document.getElementById('rejectReason').value = '';
+  updateCharCount('rejectReason', 'reasonCount', 500);
+  closeModal('detailModal');
+  document.getElementById('rejectModal').classList.add('open');
+}
+
+function confirmReject() {
+  const reason = document.getElementById('rejectReason').value.trim();
+  selectedTask.status = 'claimed';
+  selectedTask.reject_reason = reason || null;
+
+  const hash = generateFakeHash();
+  addToLog(`/tx --command '{ "op": "task_reject", "task_id": ${selectedTask.id}, "reason": "${reason}" }'`, `MSB TX broadcasted: ${hash}`, 'success');
+
+  updateStats();
+  closeModal('rejectModal');
+  renderTasks();
+  showNotification(`Submission rejected. TX: ${hash.slice(0,16)}...`, 'info');
+}
+
+function cancelTask(id) {
+  const task = tasks.find(t => t.id === id);
+  if (!task) return;
+  task.status = 'cancelled';
+
+  const hash = generateFakeHash();
+  addToLog(`/tx --command '{ "op": "task_cancel", "task_id": ${id} }'`, `MSB TX broadcasted: ${hash}`, 'success');
+
+  updateStats();
+  closeModal('detailModal');
+  renderTasks();
+  showNotification(`Task cancelled. TX: ${hash.slice(0,16)}...`, 'info');
+}
+
+// ─── FILTER ───────────────────────────────────────────────────────────────────
+function filterTasks(status, el) {
+  currentFilter = status;
+  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  renderTasks();
+}
+
+// ─── STATS ────────────────────────────────────────────────────────────────────
+function updateStats() {
+  const open = tasks.filter(t => t.status === 'open').length;
+  const claimed = tasks.filter(t => t.status === 'claimed' || t.status === 'submitted').length;
+  const done = tasks.filter(t => t.status === 'done').length;
+  const myTasks = tasks.filter(t => t.posted_by === currentUser).length;
+  const myClaimed = tasks.filter(t => t.claimed_by === currentUser).length;
+
+  document.getElementById('totalTasks').textContent = tasks.length;
+  document.getElementById('statOpen').textContent = open;
+  document.getElementById('statClaimed').textContent = claimed;
+  document.getElementById('statDone').textContent = done;
+  document.getElementById('openCount').textContent = open;
+  document.getElementById('myCount').textContent = myTasks;
+}
+
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
+function refreshTasks() {
+  renderTasks();
+  showNotification('Tasks refreshed', 'info');
+}
+
+function showTerminal() {
+  document.getElementById('terminalModal').classList.add('open');
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+
+function updateCharCount(inputId, countId, max) {
+  const len = document.getElementById(inputId).value.length;
+  const el = document.getElementById(countId);
+  el.textContent = len;
+  el.style.color = len > max * 0.9 ? 'var(--orange)' : '';
+}
+
+function formatTime(ts) {
+  const diff = Date.now() - ts;
+  if (diff < 60000) return 'just now';
+  if (diff < 3600000) return `${Math.floor(diff/60000)}m ago`;
+  if (diff < 86400000) return `${Math.floor(diff/3600000)}h ago`;
+  return `${Math.floor(diff/86400000)}d ago`;
+}
+
+function generateFakeHash() {
+  return Array.from({length: 64}, () => Math.floor(Math.random() * 16).toString(16)).join('');
+}
+
+function addToLog(cmd, result, type) {
+  const term = document.getElementById('globalTerminal');
+  const time = new Date().toLocaleTimeString();
+  term.innerHTML += `<div class="terminal-line" style="color:var(--text3);margin-top:8px;">[${time}]</div>`;
+  term.innerHTML += `<div class="terminal-line cmd">> ${cmd.slice(0, 80)}...</div>`;
+  term.innerHTML += `<div class="terminal-line ${type}">${result}</div>`;
+  term.scrollTop = term.scrollHeight;
+}
+
+function clearLog() {
+  document.getElementById('globalTerminal').innerHTML =
+    '<div class="terminal-line">// TASKBOARD TRANSACTION LOG</div><div class="terminal-line">// Cleared.</div>';
+}
+
+let notifTimer;
+function showNotification(msg, type = 'info') {
+  let el = document.getElementById('notification');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'notification';
+    document.body.appendChild(el);
+  }
+  el.className = `notification ${type}`;
+  el.textContent = `◈ ${msg}`;
+  el.style.display = 'block';
+  clearTimeout(notifTimer);
+  notifTimer = setTimeout(() => { el.style.display = 'none'; }, 4000);
+}
+
+// Close modals on overlay click
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+  overlay.addEventListener('click', e => {
+    if (e.target === overlay) overlay.classList.remove('open');
+  });
+});
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+seedData();
+addToLog('/stats', '--- Stats --- wallet.address: ce6b0f77... isIndexer: true isWriter: true', 'success');
+addToLog('/enable_transactions --enabled 1', 'Changed transactions enabled true', 'success');
+</script>
+</body>
+</html>
